@@ -1,24 +1,24 @@
-
 fun main() {
 
     fun part1(input: List<String>): Int {
-        val day02 = Day02(input)
-        return day02.getValidGamesForGrab()
-            .map { it -> it.id} .sum()
+        val day03 = Day03(input)
+        val sumOf = day03.getAllNumbersWithAdjacentSymbol().sumOf { it.value }
+        println("sumOfList " + sumOf);
+        return 1
     }
 
-
     fun part2(input: List<String>): Int {
-        val day02 = Day02(input)
-        return day02.getPowerValueForPart2()
+        val day03 = Day03(input)
+        return day03.getGearProducts().sum()
+
     }
 
 // ###############################################################
     val input = readInput(
-//        "Day02-example"
-        "Day02-input"
-//        "Day02-pt2-example"
-//        "Day02-pt2-input"
+//        "Day03-example"
+        "Day03-input"
+//        "Day03-pt2-example"
+//        "Day03-pt2-input"
     )
     println("#### Part 1 result : ")
 //    part1(input).println()
@@ -26,84 +26,89 @@ fun main() {
     part2(input).println()
 }
 
-enum class Color(val value: String) {
-    BLUE("blue"), RED("red"), GREEN("green")}
-
-class ColorGrab(val color: Color, val count: Int)
-
-class FullGrab(val allGrabs: List<ColorGrab>) {
+data class Pos(val row: Int, val col: Int) {
+    fun getAdjacentPositions(): Set<Pos> {
+        var list = mutableSetOf<Pos>()
+        if (row > 0) {
+            list.add((Pos(row - 1, col)))
+            list.add((Pos(row - 1, col - 1)))
+            list.add((Pos(row - 1, col + 1)))
+        }
+        list.add(Pos(row, col - 1))
+        list.add(Pos(row, col + 1))
+        list.add(Pos(row + 1, col - 1))
+        list.add(Pos(row + 1, col))
+        list.add(Pos(row + 1, col + 1))
+        return list
+    }
 }
-class Game(val id: Int, val rawGrabList: List<String>) {
 
-    private val grabRegEx = "([0-9]{1,3}) (red|green|blue)".toRegex()
-    var allGrabsOfGame : List<FullGrab>
+class Number(val value: Int, val allPositions: List<Pos>) {
 
-    val maxRed :Int
-    val maxGreen: Int
-    val maxBlue :Int
-
-    init {
-        allGrabsOfGame = rawGrabList.map { constructFullGrab(it) }
-
-        maxBlue = allGrabsOfGame.map { it -> it.allGrabs} .flatMap { e -> e }
-            .filter { e -> e.color == Color.BLUE}
-            .maxOf { e -> e.count }
-        maxRed = allGrabsOfGame.map { it -> it.allGrabs} .flatMap { e -> e }
-            .filter { e -> e.color == Color.RED}
-            .maxOf { e -> e.count }
-        maxGreen = allGrabsOfGame.map { it -> it.allGrabs} .flatMap { e -> e }
-            .filter { e -> e.color == Color.GREEN}
-            .maxOf { e -> e.count }
-
-    }
-
-    private fun constructFullGrab(singleGrab: String) : FullGrab {
-        val colorGrabs = singleGrab.split(",")
-            .map { colorGrab -> this.getGrabColorPart(colorGrab) }
-            .toMutableList()
-        return FullGrab(colorGrabs)
-    }
-
-    fun getGrabColorPart(value: String) :ColorGrab {
-        return grabRegEx.matchEntire(value.trim())
-            ?.destructured
-            ?.let { (count, color) ->
-                ColorGrab(Color.valueOf(color.uppercase()), count.toInt())
-            }!!
-    }
-
+    fun getAllAdjacentPositions(): Set<Pos> = allPositions.map { it.getAdjacentPositions() }.flatten().toSet()
     override fun toString(): String {
-        return "Game(id=$id, rawGrabList=$rawGrabList, allGrabsOfGame=$allGrabsOfGame, maxRed=$maxRed, maxGreen=$maxGreen, maxBlue=$maxBlue)"
+        return "Number(value=$value, allPositions=$allPositions)"
     }
 }
-class Day02(val input: List<String>) {
 
-    val destructuredRegex = "Game ([0-9]{1,4}): (.*)".toRegex()
-    val gameList: List<Game>
+class Day03(input: List<String>) {
 
-    fun getGameFromValue(value: String) :Game {
-        return destructuredRegex.matchEntire(value)
-            ?.destructured
-            ?.let { (gameIdent, grabList) ->
-                Game(gameIdent.trim().toInt(), grabList.split(";"))
-            }!!
-    }
+    val numberPattern = Regex("\\d+")
+    val symbolPattern = Regex("[^\\d.]")
+    var gridPointsWithSymbols = mutableSetOf<Pos>()
+    var allNumbers = mutableListOf<Number>()
+    var gearPosSet = mutableSetOf<Pos>()
+
     init {
-        gameList = input.map { it -> getGameFromValue(it)}
-//        gameList.forEach { println(it)}
+        input.forEachIndexed { rowIndex, line -> processLine(rowIndex, line) }
     }
 
-    fun getValidGamesForGrab(): List<Game> {
-        //12 reds
-        return gameList.filter { game -> game.maxRed <= 12 && game.maxGreen <= 13 && game.maxBlue <= 14}
+    private fun processLine(rowIndex: Int, line: String): Unit {
+        val matches = numberPattern.findAll(line)
+
+        for (match in matches) {
+            val number = match.value.toInt()
+
+            val numberPositions = match.range.map { index -> Pos(rowIndex, index) }.toList()
+            allNumbers.add(Number(number, numberPositions))
+        }
+
+        val symbolMatches = symbolPattern.findAll(line)
+        for (match in symbolMatches) {
+            val symbol = match.value
+            val symbolPositions = match.range.map { index -> Pos(rowIndex, index) }.toList()
+            symbolPositions.forEach(gridPointsWithSymbols::add)
+            if ("*" == symbol) {
+                gearPosSet.add(Pos(rowIndex, match.range.first))
+            }
+        }
     }
 
-    fun getPowerValueForPart2(): Int {
-        //12 reds
-        return gameList.map { game -> game.maxRed * game.maxGreen * game.maxBlue} . sum()
+    fun getAllNumbersWithAdjacentSymbol(): List<Number> {
+
+        return allNumbers.filter { it -> it.getAllAdjacentPositions().any(gridPointsWithSymbols::contains) }
     }
 
+    fun getGearProducts(): List<Int> {
+        val posNumberMap: Map<Pos, Number> = allNumbers
+            .flatMap { number -> number.allPositions.map { position -> position to number } }
+            .toMap()
 
+        val gearProducts: List<Int> = gearPosSet.mapNotNull { gear ->
+            val allAdjacentNumbers = gear.getAdjacentPositions().mapNotNull { posNumberMap[it] }.toSet()
+            if (allAdjacentNumbers.size == 2) {
+                allAdjacentNumbers
+                    .map { it.value }
+                    .fold(1) { acc, element -> acc * element }
+            } else {
+                null
+            }
+        }
+
+        return gearProducts
+    }
 }
+
+
 
 
