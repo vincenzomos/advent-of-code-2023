@@ -37,9 +37,8 @@ fun main() {
     part2(input).println()
 }
 
-data class Race(val time :Long, val distance :Long) {
+data class Race(val time :Long, val distance :Long)
 
-}
 class Day06(input: List<String>) {
 
     val raceList: List<Race> = createRaceList(input)
@@ -72,9 +71,9 @@ class Day06(input: List<String>) {
     }
 
     private fun calculateDistanceFor(holdButtonTime: Long, maxTime: Long): Long =  (maxTime - holdButtonTime) * holdButtonTime
-    private fun getNumberOfPossibleWins(race: Race) :Long {
+    private fun getNumberOfPossibleWins(race: Race): Long {
         return (1L..race.time).map { calculateDistanceFor(it, race.time) }
-                                .filter { it > race.distance }
+            .filter { it > race.distance }
             .count().toLong()
     }
 
