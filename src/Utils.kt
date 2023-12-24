@@ -26,3 +26,5 @@ fun Any?.println() = println(this)
 fun readCompleteFileIntoString(name:String) :String {
     return FileReader("src/main/resources/$name.txt").readText()
 }
+
+enum class Assignment {PART1, PART2}
